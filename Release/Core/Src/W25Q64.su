@@ -1,0 +1,11 @@
+../Core/Src/W25Q64.c:23:20:W25Q_CS_H	0	static
+../Core/Src/W25Q64.c:22:20:W25Q_CS_L	0	static
+../Core/Src/W25Q64.c:25:6:W25Q_Init	4	static
+../Core/Src/W25Q64.c:35:6:W25Q_WriteEnable	16	static
+../Core/Src/W25Q64.c:43:9:W25Q_ReadStatusReg1	16	static
+../Core/Src/W25Q64.c:54:6:W25Q_WaitForReady	8	static
+../Core/Src/W25Q64.c:64:6:W25Q_EraseSector	24	static
+../Core/Src/W25Q64.c:75:6:W25Q_EraseBlock64K	24	static
+../Core/Src/W25Q64.c:86:6:W25Q_EraseChip	24	static
+../Core/Src/W25Q64.c:99:6:W25Q_Read	24	static
+../Core/Src/W25Q64.c:111:6:W25Q_Write	40	static

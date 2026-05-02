@@ -1,0 +1,6 @@
+../Core/Src/USARTCommunication.c:30:6:USART_StartReceiveIT	0	static
+../Core/Src/USARTCommunication.c:20:6:InitUSART	8	static
+../Core/Src/USARTCommunication.c:35:6:USART_OnByteReceived	0	static
+../Core/Src/USARTCommunication.c:56:6:USART_TakeLine	24	static
+../Core/Src/USARTCommunication.c:90:19:Sendf	24	static
+../Core/Src/USARTCommunication.c:106:19:Send	0	static

@@ -1,0 +1,8 @@
+../Core/Src/eeF4.c:8:6:flash_clear_all_flags	4	static
+../Core/Src/eeF4.c:15:19:wait_flash_ready	24	static
+../Core/Src/eeF4.c:34:10:getHexAddressPage	24	static
+../Core/Src/eeF4.c:40:10:retrieveDataFromAddress	16	static
+../Core/Src/eeF4.c:50:17:GetSector	16	static
+../Core/Src/eeF4.c:74:10:GetPage	16	static
+../Core/Src/eeF4.c:84:19:memoryPageErase	48	static,ignoring_inline_asm
+../Core/Src/eeF4.c:135:19:writeThreeData	56	static
