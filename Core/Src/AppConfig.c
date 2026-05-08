@@ -5,6 +5,7 @@
  */
 
 #include "AppConfig.h"
+#include <stddef.h>
 
 void AppConfig_SetDefaults(DataFlash *config)
 {
