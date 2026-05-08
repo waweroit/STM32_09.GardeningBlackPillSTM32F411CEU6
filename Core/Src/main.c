@@ -27,6 +27,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "eeF4.h"
+#include "AppConfig.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -66,22 +67,6 @@ volatile uint16_t ADC_MoistureSensor_Dev_2[Channel_3_BUF_SIZE];
 volatile uint16_t ADC_LightSensor_Dev[Channel_4_BUF_SIZE];
 volatile uint16_t adc_buffer[ADC_BUF_SIZE];
 
-#define FLASH_MAGIC      0xA55A1235
-typedef struct {
-	uint32_t magic;
-	uint32_t Sensor1DryValue;
-	uint32_t Sensor1WetValue;
-	uint32_t Sensor2DryValue;
-	uint32_t Sensor2WetValue;
-	uint32_t GetMoistureAvg_TimeLenghtDefault; // 20 sek
-	uint32_t GetMoistureAvg_TimeLenghtFast; // 1sek
-	uint32_t StartPumpWhenMoistureLower;
-	uint32_t StopPumpWhenMoistureHigher;
-	uint32_t lightTime;
-} DataFlash;
-
-static void Config_SetDefaults(DataFlash *config);
-static bool Config_IsValid(const DataFlash *config);
 
 DataFlash dane;
 //uint32_t flash_addr = 0x000100;
@@ -127,11 +112,11 @@ int main(void)
   int MoistureHumidityPercent_Dev_2 = 0;
   int MoistureGeneral = 0;
 
-  bool PumpIsRunnign = false;
+  bool PumpIsRunning = false;
 //  int StartPumpWhenMoistureLower = 40;
 //  int StopPumpWhenMoistureHigher = 75;
 
-  bool waitFordark = false;
+  bool waitForDark = false;
   bool LightTimerEnabled = false;
 //  uint32_t lightTime = 3600 * 1000 * 10;
   uint32_t GetLightTime_FromTime = 0;
@@ -202,10 +187,10 @@ int main(void)
 	Send("Read from flash on start...\r\n");
 	memcpy(&dane, (void*)flash_address, sizeof(DataFlash));
 
-	if  (dane.magic != FLASH_MAGIC || !Config_IsValid(&dane))
+	if  (!AppConfig_IsValid(&dane))
 	{
 	    // To pierwsze uruchomienie lub dane niewazne
-		Config_SetDefaults(&dane);
+		AppConfig_SetDefaults(&dane);
 
 	    // Skasuj i zapisz domyslne wartosci do flash
 		Send("Write basic Configuration\r\n");
@@ -240,7 +225,7 @@ int main(void)
 	      while (USART_TakeLine(line, sizeof(line))) {
 
 	          bool matched = false;
-	          DataFlash dane_backup = dane;
+          DataFlash dane_backup = dane;
 
 	          matched |= parse_kv_int(line, "S1DValue", &dane.Sensor1DryValue);
 	          matched |= parse_kv_int(line, "S1WValue", &dane.Sensor1WetValue);
@@ -301,7 +286,7 @@ int main(void)
 	          }
 	          else if (matched)
 	          {
-	            if (!Config_IsValid(&dane))
+	            if (!AppConfig_IsValid(&dane))
 	            {
 	              dane = dane_backup;
 	              Sendf("ERR: invalid config \"%s\"\r\n", line);
@@ -427,13 +412,13 @@ int main(void)
 
 				 if (WaterSensor1State != GPIO_PIN_SET)
 				 {
-					 if(MoistureGeneral <= dane.StartPumpWhenMoistureLower && PumpIsRunnign == false && MixWaterState == MIX_WATER_IDLE)
+					 if(MoistureGeneral <= dane.StartPumpWhenMoistureLower && PumpIsRunning == false && MixWaterState == MIX_WATER_IDLE)
 					 {
 						 Sendf("Soil moisture avg: %d is <= %d \r\n", MoistureGeneral, dane.StartPumpWhenMoistureLower);
 
 						 GetMoistureAvg_TimeLenght = dane.GetMoistureAvg_TimeLenghtFast;
 						 HAL_GPIO_WritePin(PIN_PB10_Pump_GPIO_Port, PIN_PB10_Pump_Pin, GPIO_PIN_SET);
-						 PumpIsRunnign = true;
+						 PumpIsRunning = true;
 					 }
 				 }
 				 else
@@ -443,20 +428,20 @@ int main(void)
 
 
 
-				 if(PumpIsRunnign == true && WaterSensor1State == GPIO_PIN_SET)
+				 if(PumpIsRunning == true && WaterSensor1State == GPIO_PIN_SET)
 				 {
 					 Sendf("Water level: LOW\r\n");
 					 HAL_GPIO_WritePin(PIN_PB10_Pump_GPIO_Port, PIN_PB10_Pump_Pin, GPIO_PIN_RESET);
 					 GetMoistureAvg_TimeLenght = dane.GetMoistureAvg_TimeLenghtDefault;
-					 PumpIsRunnign = false;
+					 PumpIsRunning = false;
 				 }
 
-				 if(MoistureGeneral >= dane.StopPumpWhenMoistureHigher && PumpIsRunnign == true)
+				 if(MoistureGeneral >= dane.StopPumpWhenMoistureHigher && PumpIsRunning == true)
 				 {
 					 Sendf("Soil moisture avg: %d is >= %d \r\n", MoistureGeneral, dane.StopPumpWhenMoistureHigher);
 					 HAL_GPIO_WritePin(PIN_PB10_Pump_GPIO_Port, PIN_PB10_Pump_Pin, GPIO_PIN_RESET);
 					 GetMoistureAvg_TimeLenght = dane.GetMoistureAvg_TimeLenghtDefault;
-					 PumpIsRunnign = false;
+					 PumpIsRunning = false;
 				 }
 
 			 }
@@ -507,13 +492,13 @@ int main(void)
 		                        Sendf("Light sensor DARK disable LED\r\n");
 		                        LightIsON = false;
 		                    }
-		                    waitFordark = false;
+		                    waitForDark = false;
 		                }
 		            break;
 
 		            case NIGHT_OR_MORNING:
 		                // Start okna 10h tylko przy pierwszym sensownym "porannym" warunku
-		                if(LightTimerEnabled == false && waitFordark == false)
+		                if(LightTimerEnabled == false && waitForDark == false)
 		                {
 		                    GetLightTime_FromTime = TimeNOW; // od tej pory zliczamy 10H okna świecenia
 		                    LightTimerEnabled = true;
@@ -521,7 +506,7 @@ int main(void)
 
 		                if(LightTimerEnabled == true)
 		                {
-		                    if(LightIsON == false && waitFordark == false)
+		                    if(LightIsON == false && waitForDark == false)
 		                    {
 		                        LightIsON = true;
 		                        HAL_GPIO_WritePin(PIN_PB11_Light_GPIO_Port, PIN_PB11_Light_Pin, GPIO_PIN_SET);
@@ -552,7 +537,7 @@ int main(void)
 
 		        HAL_GPIO_WritePin(PIN_PB11_Light_GPIO_Port, PIN_PB11_Light_Pin, GPIO_PIN_RESET);
 		        LightIsON = false; // spójność stanu
-		        waitFordark = true;
+		        waitForDark = true;
 		        Sendf("Light time elapsed - disable LED\r\n");
 		    }
 		}
@@ -566,7 +551,7 @@ int main(void)
 				MixWater_FromTime = TimeNOW;
 				if (WaterSensor1State != GPIO_PIN_SET &&
 					MoistureGeneral < dane.StopPumpWhenMoistureHigher &&
-					PumpIsRunnign == false)
+					PumpIsRunning == false)
 				{
 					Sendf("Mixing water..\r\n");
 					HAL_GPIO_WritePin(PIN_PB10_Pump_GPIO_Port, PIN_PB10_Pump_Pin, GPIO_PIN_SET);
@@ -736,62 +721,10 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 {
     if (huart->Instance == USART1) // Sprawdź, czy to Twój UART
     {
-    	isTransmissionComplete = true;
+    		USART_OnTxComplete();
     }
 }
 
-
-static void Config_SetDefaults(DataFlash *config)
-{
-    if (config == NULL)
-        return;
-
-    config->magic = FLASH_MAGIC;
-    config->Sensor1DryValue = 2700;
-    config->Sensor1WetValue = 2020;
-    config->Sensor2DryValue = 2700;
-    config->Sensor2WetValue = 2020;
-    config->GetMoistureAvg_TimeLenghtDefault = 20000; // 20 sek
-    config->GetMoistureAvg_TimeLenghtFast = 1000; // 1 sek
-    config->StartPumpWhenMoistureLower = 40;
-    config->StopPumpWhenMoistureHigher = 75;
-    config->lightTime = 3600 * 1000 * 10; // 10 h
-}
-
-static bool Config_IsValid(const DataFlash *config)
-{
-    if (config == NULL)
-        return false;
-
-    if (config->magic != FLASH_MAGIC)
-        return false;
-
-    if (config->Sensor1WetValue >= config->Sensor1DryValue || config->Sensor1DryValue > 4095u)
-        return false;
-
-    if (config->Sensor2WetValue >= config->Sensor2DryValue || config->Sensor2DryValue > 4095u)
-        return false;
-
-    if (config->GetMoistureAvg_TimeLenghtFast == 0u)
-        return false;
-
-    if (config->GetMoistureAvg_TimeLenghtDefault == 0u)
-        return false;
-
-    if (config->GetMoistureAvg_TimeLenghtFast > config->GetMoistureAvg_TimeLenghtDefault)
-        return false;
-
-    if (config->StartPumpWhenMoistureLower >= config->StopPumpWhenMoistureHigher)
-        return false;
-
-    if (config->StopPumpWhenMoistureHigher > 100u)
-        return false;
-
-    if (config->lightTime == 0u)
-        return false;
-
-    return true;
-}
 
 static bool parse_kv_int(const char *line, const char *key, uint32_t *outVal)
 {
