@@ -10,14 +10,20 @@
 #include <string.h>
 
 volatile bool isTransmissionComplete = false;
-volatile bool isRecivingComplete = false;
+volatile bool isReceivingComplete = false;
 
 volatile uint8_t rxByte;
 static char rxLine[RX_BUFFER_SIZE];
 static size_t rxLen = 0;
-static volatile bool rxLineReady = false;
+
+static char rxLineQueue[RX_LINE_QUEUE_DEPTH][RX_BUFFER_SIZE];
+static volatile size_t rxLineQueueHead = 0u;
+static volatile size_t rxLineQueueTail = 0u;
+static volatile size_t rxLineQueueCount = 0u;
 
 uint8_t txBuffer[TX_BUFFER_SIZE];
+
+static bool USART_RxQueuePushLine(const char *line);
 
 void InitUSART(void)
 {
@@ -38,8 +44,7 @@ void USART_OnByteReceived(uint8_t b)
         if (rxLen > 0u) {
             if (rxLen >= RX_BUFFER_SIZE) rxLen = RX_BUFFER_SIZE - 1u;
             rxLine[rxLen] = '\0';
-            rxLineReady = true;
-            isRecivingComplete = true;
+            (void)USART_RxQueuePushLine(rxLine);
             rxLen = 0u;
         }
     } else {
@@ -47,8 +52,6 @@ void USART_OnByteReceived(uint8_t b)
             rxLine[rxLen++] = (char)b;
         } else {
             rxLen = 0u;
-            rxLineReady = false;
-            isRecivingComplete = false;
         }
     }
 }
@@ -60,16 +63,24 @@ bool USART_TakeLine(char *out, size_t outSize)
     }
 
     __disable_irq();
-    bool ready = rxLineReady;
+    bool ready = (rxLineQueueCount > 0u);
     if (ready) {
-        strncpy(out, rxLine, outSize - 1u);
+        strncpy(out, rxLineQueue[rxLineQueueTail], outSize - 1u);
         out[outSize - 1u] = '\0';
-        rxLineReady = false;
-        isRecivingComplete = false;
+        rxLineQueueTail = (rxLineQueueTail + 1u) % RX_LINE_QUEUE_DEPTH;
+        rxLineQueueCount--;
+        isReceivingComplete = (rxLineQueueCount > 0u);
+    } else {
+        isReceivingComplete = false;
     }
     __enable_irq();
 
     return ready;
+}
+
+void USART_OnTxComplete(void)
+{
+    isTransmissionComplete = true;
 }
 
 static HAL_StatusTypeDef Send_IT_internal(const uint8_t *data, size_t len, uint32_t timeout_ms)
@@ -115,4 +126,21 @@ HAL_StatusTypeDef Send(const char *text)
 {
     if (text == NULL) return HAL_ERROR;
     return Sendf("%s", text);
+}
+
+static bool USART_RxQueuePushLine(const char *line)
+{
+    if (line == NULL) return false;
+
+    if (rxLineQueueCount >= RX_LINE_QUEUE_DEPTH) {
+        return false;
+    }
+
+    strncpy(rxLineQueue[rxLineQueueHead], line, RX_BUFFER_SIZE - 1u);
+    rxLineQueue[rxLineQueueHead][RX_BUFFER_SIZE - 1u] = '\0';
+    rxLineQueueHead = (rxLineQueueHead + 1u) % RX_LINE_QUEUE_DEPTH;
+    rxLineQueueCount++;
+    isReceivingComplete = true;
+
+    return true;
 }
