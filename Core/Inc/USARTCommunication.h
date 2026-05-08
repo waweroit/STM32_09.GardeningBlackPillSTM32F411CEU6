@@ -18,6 +18,7 @@
 
 #define RX_BUFFER_SIZE 200
 #define TX_BUFFER_SIZE 200
+#define RX_LINE_QUEUE_DEPTH 4
 
 extern volatile bool isTransmissionComplete;
 extern volatile bool isReceivingComplete;
@@ -31,6 +32,7 @@ void InitUSART(void);
 bool USART_TakeLine(char *out, size_t outSize);
 void USART_OnByteReceived(uint8_t b);
 void USART_StartReceiveIT(void);
+void USART_OnTxComplete(void);
 
 HAL_StatusTypeDef Sendf(const char *fmt, ...);
 HAL_StatusTypeDef Send(const char *text);
