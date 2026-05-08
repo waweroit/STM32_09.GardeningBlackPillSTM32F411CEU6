@@ -20,7 +20,8 @@
 #define TX_BUFFER_SIZE 200
 
 extern volatile bool isTransmissionComplete;
-extern volatile bool isRecivingComplete;
+extern volatile bool isReceivingComplete;
+#define isRecivingComplete isReceivingComplete
 extern volatile uint8_t rxByte;
 
 extern uint8_t txBuffer[TX_BUFFER_SIZE];
