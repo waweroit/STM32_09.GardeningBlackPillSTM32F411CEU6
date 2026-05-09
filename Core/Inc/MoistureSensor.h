@@ -8,13 +8,10 @@
 #ifndef INC_MOISTURESENSOR_H_
 #define INC_MOISTURESENSOR_H_
 
-#include "main.h"
+#include <stddef.h>
+#include <stdint.h>
 
-#define ADC_SCALE 4095.0  // ADC w STM32 ma rozdzielczość 12-bitowąc
-#define VREF 2.6        // Zakładam VREF = 5.0V  lub 3.3V
-#define ZEROPOINT 2048    // Środek zakresu dla 12-bitowego ADC
+int ScaleADC_Light_To_Percentage(const uint16_t *adc_buffer, size_t size, int adc_dark, int adc_bright);
+int ScaleADC_To_Percent_Inverted_Ranged(const uint16_t *adc_buffer, size_t size, int dry_value, int wet_value);
 
-
-int ScaleADC_Light_To_Percentage(const uint16_t *adc_buffer, int size, int adc_dark, int adc_bright);
-int ScaleADC_To_Percent_Inverted_Ranged(const uint16_t *adc_buffer, int size, int dry_value, int wet_value);
 #endif /* INC_MOISTURESENSOR_H_ */
